@@ -1,1 +1,1 @@
-Start of autoware_mini_practice_solutions
+Autoware Mini Course's tasks solutions are stored here.
