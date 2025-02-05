@@ -1,6 +1,6 @@
 # Autoware_mini installation guide related problems
 
-* Enne ros update sammu laadisina alla autoware_misc <https://gitlab.cs.ut.ee/autonomous-driving-lab/autoware.ai/local/autoware_misc> repo, kus käivitasin autoware_misc/03_astuff_repos.sh skripti, seejärel lisasin võtme käsuga `sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6390D5EC6C3076CE` ning seejärel käivitasin `autoware_misc/03_astuff_repos.sh` skripti uuesti
+* Enne ros update sammu laadisina alla [autoware_misc](https://gitlab.cs.ut.ee/autonomous-driving-lab/autoware.ai/local/autoware_misc) repo, kus käivitasin autoware_misc/03_astuff_repos.sh skripti, seejärel lisasin võtme käsuga `sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6390D5EC6C3076CE` ning seejärel käivitasin `autoware_misc/03_astuff_repos.sh` skripti uuesti
 
 * Lisaks cuda 11.8 tuleb alla laadida ka cuda 12.2. Ehk viimane prerequisites sektsioonis antud käsk võiks välja näha hoopis selline: `sudo apt-get -y install cuda-11-8 libcudnn8 cuda-12-2`. Lisaks on cuDNN link katki.
 
@@ -17,7 +17,7 @@ cloudpickle==1.5.0
 * Ehk requirements_cuml.txt näeb lokaalselt välja hetkel selline:
 
 ``` txt
---extra-index-url <https://pypi.nvidia.com/>
+--extra-index-url https://pypi.nvidia.com/
 cuda-python==11.8.2
 click==8.0
 zipp==3.1.0
