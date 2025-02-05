@@ -1,4 +1,4 @@
-# Autoware_mini installation guide related problems
+# Autoware_mini installation guide related problems and solutions
 
 * Enne ros update sammu laadisina alla [autoware_misc](https://gitlab.cs.ut.ee/autonomous-driving-lab/autoware.ai/local/autoware_misc) repo, kus käivitasin autoware_misc/03_astuff_repos.sh skripti, seejärel lisasin võtme käsuga `sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6390D5EC6C3076CE` ning seejärel käivitasin `autoware_misc/03_astuff_repos.sh` skripti uuesti
 
