@@ -1,1 +1,1 @@
-Autoware Mini Course's tasks solutions are stored here.
+Autoware Mini course's tasks solutions are stored here.
