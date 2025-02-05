@@ -31,6 +31,6 @@ numba==0.56.4
 importlib-metadata==6.6.0
 ```
 
-* README-s antud bag ei lähe niisama tööle. Tööle saamiseks tuli `<exec_depend>autoware_msgs</exec_depend>` lisada suuremasse package.xml faili, seejärel tuli uuesti teha `rosdep update`, `rosdep rosdep install --from-paths . --ignore-src -r -y` ning `catkin build`)
+* README-s antud bag ei lähe niisama tööle. Tööle saamiseks tuli `<exec_depend>autoware_msgs</exec_depend>` lisada package.xml faili, seejärel tuli uuesti teha `rosdep update`, `rosdep rosdep install --from-paths . --ignore-src -r -y` ning `catkin build`)
 
 * carla download link on katki
