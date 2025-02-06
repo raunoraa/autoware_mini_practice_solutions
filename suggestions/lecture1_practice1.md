@@ -2,11 +2,11 @@
 
 ## Loeng 1
 
-Autoware_mini arhitektuuri skeemis on näha, et fooritulede tuvastusel kasutatakse kaarti, APIt ja kaamerat. Samas mulle tundub, et kaart tegelikult antakse API-le ette, mitte ei kasutata otseselt fooritulede tuvastamisel. Võib-olla ma eksin, aga lihtsalt selline tähelepanek.
+Autoware_mini arhitektuuri skeemis on näha, et fooritulede tuvastusel kasutatakse kaarti, APIt ja kaamerat. Samas mulle tundub, et kaart tegelikult antakse API-le ette, mitte ei kasutata otseselt fooritulede tuvastamisel. Võib-olla ma eksin, aga lihtsalt selline tähelepanek. **A:** Tegelikult on kaart ja fooride API üksteisest sõltumatud. Fooride API puhul saadakse andmed mqtt serveri kaudu, kus iga ristmik on kodeeritud.
 
-**Q:** Oletan, et fooride API on selline, et linnalt saadakse live andmed fooride olekust. See tundub olevat minu arvates kõige täpsem meetod fooritulede tuvastamiseks. Miks kasutatakse fooritulede jaoks ka kaamerat (ehk siis masinõppel põhinevat pildituvastust, mis võib olla ebatäpne)? Kas see on ajutine lahendus näiteks selleks, kui isejuhtivas autos peaks internet mingil põhjusel kaduma või kui linnal ei ole fooritulede APIt veel pakkuda?
+**Q:** Oletan, et fooride API on selline, et linnalt saadakse live andmed fooride olekust. See tundub olevat minu arvates kõige täpsem meetod fooritulede tuvastamiseks. Miks kasutatakse fooritulede jaoks ka kaamerat (ehk siis masinõppel põhinevat pildituvastust, mis võib olla ebatäpne)? Kas see on ajutine lahendus näiteks selleks, kui isejuhtivas autos peaks internet mingil põhjusel kaduma või kui linnal ei ole fooritulede APIt veel pakkuda? **A:** Kahjuks on fooride API hetkel suhteliselt piiratud ulatusega, mistõttu tuleb kasutada tihti kaamerapõhist tuvastust.
 
-ROS on esmakordsel kasutamisel suhteliselt keeruline teema (vähemalt minu jaoks oli, robootika I ainekursuses kasutasime ainult Pythonit, seetõttu varasem kokkupuude ROSiga puudus). Loengumaterjalides on see minu arvates päris hästi lahti seletatud.
+ROS on esmakordsel kasutamisel suhteliselt keeruline teema (vähemalt minu jaoks oli, robootika I ainekursuses kasutasime ainult Pythonit, seetõttu minul varasem kokkupuude ROSiga puudus). Loengumaterjalides on see minu arvates päris hästi lahti seletatud.
 
 ## Praktikum 1
 
