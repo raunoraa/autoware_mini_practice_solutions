@@ -8,7 +8,7 @@ from tf2_ros import TransformBroadcaster
 from pyproj import CRS, Transformer, Proj
 
 from novatel_oem7_msgs.msg import INSPVA
-from geometry_msgs.msg import PoseStamped, TwistStamped, Quaternion, TransformStamped
+from geometry_msgs.msg import PoseStamped, TwistStamped, Quaternion, TransformStamped, Vector3
 
 
 class Localizer:
@@ -51,12 +51,12 @@ class Localizer:
         current_transform_y = current_y - self.origin_y
 
         # print(current_transform_x, current_transform_y)
-
+        
         # calculate azimuth correction
         azimuth_correction = self.utm_projection.get_factors(
             msg.longitude, msg.latitude
         ).meridian_convergence
-        corrected_azimuth = msg.azimuth - azimuth_correction
+        corrected_azimuth = (msg.azimuth - azimuth_correction) * (math.pi/180)
 
         # convert azimuth to yaw angle
         def convert_azimuth_to_yaw(azimuth):
@@ -95,10 +95,29 @@ class Localizer:
         current_velocity_msg.header.stamp = msg.header.stamp
         current_velocity_msg.header.frame_id = "base_link"
         
-        norm_velocity = (msg.north_velocity + msg.east_velocity) / 2
-        current_velocity_msg.twist.linear.x = norm_velocity
+        velocity_magnitude = math.sqrt(
+            math.pow(msg.north_velocity, 2) + math.pow(msg.east_velocity, 2)
+        )
+        current_velocity_msg.twist.linear.x = velocity_magnitude
         
         self.current_velocity_pub.publish(current_velocity_msg)
+        
+        
+        # create a transform message
+        t = TransformStamped()
+
+        # fill in the transform message - t
+        t.header.stamp = msg.header.stamp
+        t.header.frame_id = "map"
+        t.child_frame_id = "base_link"
+        
+        #t.transform.translation = Vector3(-current_pose_msg.pose.position.x, -current_pose_msg.pose.position.y, -current_pose_msg.pose.position.z)
+        t.transform.translation = current_pose_msg.pose.position
+        t.transform.rotation = current_pose_msg.pose.orientation
+        
+        # publish transform
+        self.br.sendTransform(t)
+
 
     def run(self):
         rospy.spin()

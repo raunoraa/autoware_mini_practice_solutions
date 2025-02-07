@@ -41,4 +41,4 @@ Praksilahenduste sidumisel autoware_mini repoga võiks juhendisse lisaks kirja p
 
 Publish pose sektsioonis on valideerimise näidistulemustes vist position.z vale, sest mina sain `msg.height - self.undulation` (see, kuidas juhendi järgi peaks position.z arvutama) tulemusteks arvud 34 ja 38 vahel (juhendi näidistulemustes on see 0, mul ei tulnud see kordagi 0, ei tahaks uskuda ka, et see peaks 0 olema).
 
-TODO Alates 4. sektsioon
+Juhendis võiks mainida, et GNSS sensorilt tuleb asimuut kraadides (mitte radiaanides). Otsisin seetõttu kaua, miks mu orientatsioon vale oli, kuigi arvutused olid kõik õiged (ei tulnud selle peale, et kontrollida sensorilt tulevaid msg.azimuth väärtusi).
