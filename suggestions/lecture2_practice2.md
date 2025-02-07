@@ -33,7 +33,6 @@ Vaatasin ka, et errori saab ära nii, kui teha `cd /home/rauno/carla_root/Python
 
 Kui peale neid fixe avada terminal uuesti ning teha uuesti `roswtf`, siis erroreid enam ei tule.
 
-\n
 **NB! PYTHONPATH-i vastav muutmine teeb Carla simulatsioonide launchimise katki, seega ei tohiks ikkagi PYTHONPATH-i selliselt muuta!**  Pole muidugi kindel, kas see error üldse vajab fiximist, sest hetkel tundus, et see midagi ei mõjutanud.
 
 ## Praktikum 2
