@@ -20,12 +20,20 @@ Kui ma sain õigesti aru, siis GNSS localization slaidil olevatele küsimustele 
 
 Proovisin `roswtf` käsku, mis andis ühe errori:
 
-``` ERROR Not all paths in PYTHONPATH [/home/rauno/autoware_mini_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages:/home/rauno/carla_root/PythonAPI/carla/dist/carla-0.9.13-py3.7-linux-x86_64.egg:/home/rauno/carla_root/PythonAPI/carla/agents:/home/rauno/carla_root/PythonAPI/carla] point to a directory:
+```  txt
+ERROR Not all paths in PYTHONPATH [/home/rauno/autoware_mini_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages:/home/rauno/carla_root/PythonAPI/carla/dist/carla-0.9.13-py3.7-linux-x86_64.egg:/home/rauno/carla_root/PythonAPI/carla/agents:/home/rauno/carla_root/PythonAPI/carla] point to a directory:
  * /home/rauno/carla_root/PythonAPI/carla/dist/carla-0.9.13-py3.7-linux-x86_64.egg
 ```
 
-Vaatasin ka, et errori saab ära nii, kui teha `cd /home/rauno/carla_root/PythonAPI/carla/dist/`, seejärel `unzip carla-0.9.13-py3.7-linux-x86_64.egg` ning seejärel muuta PYTHONPATH ~/.bashrc failis järgnevaks: `/home/rauno/autoware_mini_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages:/home/rauno/carla_root/PythonAPI/carla/dist/carla-0.9.13-py3.7-linux-x86_64.egg:/home/rauno/carla_root/PythonAPI/carla/agents:/home/rauno/carla_root/PythonAPI/carla`.
+Vaatasin ka, et errori saab ära nii, kui teha `cd /home/rauno/carla_root/PythonAPI/carla/dist/`, seejärel `unzip carla-0.9.13-py3.7-linux-x86_64.egg` ning seejärel muuta PYTHONPATH ~/.bashrc failis järgnevaks:
+
+``` txt
+/home/rauno/autoware_mini_ws/devel/lib/python3/dist-packages:/opt/ros/noetic/lib/python3/dist-packages:/home/rauno/carla_root/PythonAPI/carla/dist/carla-0.9.13-py3.7-linux-x86_64.egg:/home/rauno/carla_root/PythonAPI/carla/agents:/home/rauno/carla_root/PythonAPI/carla
+```
+
 Kui peale neid fixe avada terminal uuesti ning teha uuesti `roswtf`, siis erroreid enam ei tule.
+
+\n
 **NB! PYTHONPATH-i vastav muutmine teeb Carla simulatsioonide launchimise katki, seega ei tohiks ikkagi PYTHONPATH-i selliselt muuta!**  Pole muidugi kindel, kas see error üldse vajab fiximist, sest hetkel tundus, et see midagi ei mõjutanud.
 
 ## Praktikum 2
