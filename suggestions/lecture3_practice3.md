@@ -9,4 +9,8 @@ Mulle meeldis see, et slaididel on all viited pikematele artiklitele, millest v�
 
 ## Praktikum 3
 
-TODO
+**Bug:** Probleem 1. ja 2. sektsiooni juures etteantud failidega: failis `~/autoware_mini_ws/src/autoware_mini/nodes/planning/waypoints/waypoint_loader.py` pidi k채su `roslaunch autoware_mini_practice_solutions practice_3.launch` toimimiseks v채lja kommenteerima read 49 (gid) ja 60 (change_flag).
+
+**Bug:** Probleem 2. sektsiooni juures etteantud failidega: `waypoint_loader` nodel ei ole 체hendust `pure_pursuit_follower` nodega. Probleemi lahendamiseks peab failis `pure_pursuit_follower.py` muutma 5. rea impordi j채rgnevaks: `from autoware_mini.msg import Path`. Samuti tuleb siis seej채rel asendada k천ik `Lane` kirjed koodis asendada kirjega `Path`.
+
+TODO alates sektsioon 3

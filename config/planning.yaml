@@ -5,6 +5,8 @@ braking_reaction_time: 1.6
 default_acceleration: 1.0
 default_deceleration: 1.0
 
+default_left_width: 1.4         # m
+default_right_width: 1.4        # m
 
 waypoint_loader:
   output_frame: map
