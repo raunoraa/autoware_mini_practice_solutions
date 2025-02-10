@@ -44,13 +44,9 @@ class Localizer:
 
     def transform_coordinates(self, msg):
 
-        # print(msg.latitude, msg.longitude)
-
         current_x, current_y = self.transformer.transform(msg.latitude, msg.longitude)
         current_transform_x = current_x - self.origin_x
         current_transform_y = current_y - self.origin_y
-
-        # print(current_transform_x, current_transform_y)
         
         # calculate azimuth correction
         azimuth_correction = self.utm_projection.get_factors(
@@ -111,7 +107,6 @@ class Localizer:
         t.header.frame_id = "map"
         t.child_frame_id = "base_link"
         
-        #t.transform.translation = Vector3(-current_pose_msg.pose.position.x, -current_pose_msg.pose.position.y, -current_pose_msg.pose.position.z)
         t.transform.translation = current_pose_msg.pose.position
         t.transform.rotation = current_pose_msg.pose.orientation
         
