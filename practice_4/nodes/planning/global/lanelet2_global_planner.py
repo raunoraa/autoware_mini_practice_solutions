@@ -27,7 +27,6 @@ class Lanelet2GlobalPlanner:
         # routing graph
         self.graph = lanelet2.routing.RoutingGraph(self.lanelet2_loaded_map, traffic_rules)
         
-        
         self.current_location = None
         self.goal_point = None        
 
@@ -77,6 +76,13 @@ class Lanelet2GlobalPlanner:
         return lanelet2_map
         
     def goalpoint_callback(self, msg):
+        
+        if self.current_location is None:
+            rospy.logwarn(
+                "Current location has not been initialized yet!"
+            )
+            return
+        
         # loginfo message about receiving the goal point
         rospy.loginfo(
             "%s - goal position (%f, %f, %f) orientation (%f, %f, %f, %f) in %s frame", rospy.get_name(),
@@ -86,29 +92,23 @@ class Lanelet2GlobalPlanner:
         )
         
         self.goal_point = BasicPoint2d(msg.pose.position.x, msg.pose.position.y)
-        
-        if self.current_location:
-            # get start and end lanelets
-            start_lanelet = findNearest(self.lanelet2_loaded_map.laneletLayer, self.current_location, 1)[0][1]
-            goal_lanelet = findNearest(self.lanelet2_loaded_map.laneletLayer, self.goal_point, 1)[0][1]
-            # find routing graph
-            route = self.graph.getRoute(start_lanelet, goal_lanelet, 0, True)
 
-            if not route:
-                rospy.logwarn("Impossible to reach the given goal!")
-                return None
-            
-            # find shortest path
-            path = route.shortestPath()
-            
-            # this returns LaneletSequence to a point where lane change would be necessary to continue
-            path_no_lane_change = path.getRemainingLane(start_lanelet)
-            print(path_no_lane_change)
-            
-        else:
-            rospy.logwarn(
-                "Current location has not been initialized yet!"
-            )
+        # get start and end lanelets
+        start_lanelet = findNearest(self.lanelet2_loaded_map.laneletLayer, self.current_location, 1)[0][1]
+        goal_lanelet = findNearest(self.lanelet2_loaded_map.laneletLayer, self.goal_point, 1)[0][1]
+        # find routing graph
+        route = self.graph.getRoute(start_lanelet, goal_lanelet, 0, True)
+
+        if route is None:
+            rospy.logwarn("Impossible to reach the given goal!")
+            return None
+        
+        # find shortest path
+        path = route.shortestPath()
+        
+        # this returns LaneletSequence to a point where lane change would be necessary to continue
+        path_no_lane_change = path.getRemainingLane(start_lanelet)
+        print(path_no_lane_change)
         
     def current_pose_callback(self, msg):
         self.current_location = BasicPoint2d(msg.pose.position.x, msg.pose.position.y)
