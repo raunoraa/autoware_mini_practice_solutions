@@ -19,7 +19,6 @@ lanelet2_global_planner:
 
 simple_local_planner:
   output_frame: map
-  local_path_length: 100
   nearest_neighbor_search: kd_tree  # kd_tree. ball_tree, brute, auto
   transform_timeout: 0.06
   dense_waypoint_interval: 0.1
@@ -27,3 +26,9 @@ simple_local_planner:
   braking_safety_distance_obstacle: 4.0
   braking_safety_distance_stopline: 2.0
   braking_safety_distance_goal: 0.0
+
+# Not included in the given file
+local_path_length: 100
+lanelet2_map_visualizer:
+  use_map_extraction: False     # extract smaller map area around the ego vehicle for visualization
+  map_extraction_distance: 500  # m - distance from ego vehicle to extract map data
