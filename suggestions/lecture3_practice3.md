@@ -19,6 +19,6 @@ Mulle meeldis see, et slaididel on all viited pikematele artiklitele, millest v�
 
 **Viga juhendis:** Sektsioonis 4 punktis 5 peaks viimane lause olema hoopis "Fix it by checking if the value is not set the `path_callback` should return.", sest on vaja kontrollida, et `path_callback` funktsioon oleks `self.path_linstring` (või mis iganes nime tudeng määras klassimuutujale) muutujat uuendanud (et see poleks enam `None`).
 
-**Bug:** Sektsioonis 6 antud koodis peaks `velocities` muutuja olema väärtustatud hoopis nii: `velocities = np.array([w.twist.twist.linear.x for w in msg.waypoints])`
+**Bug:** Sektsioonis 6 antud koodis peaks `velocities` muutuja olema väärtustatud hoopis nii: `velocities = np.array([w.speed for w in msg.waypoints])`
 
 Loengus või praktikumijuhendis võiks olla mainitud ka `threading.Lock` funktsiooni. Seda tuleks kasutada muutujate `self.path_linestring` ja `self.distance_to_velocity_interpolator` väärtustamisel, et need saaksid korraga väärtused.

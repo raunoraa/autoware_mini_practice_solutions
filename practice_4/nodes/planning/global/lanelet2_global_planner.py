@@ -3,6 +3,7 @@
 import rospy
 
 from geometry_msgs.msg import PoseStamped
+from autoware_mini.msg import Path, Waypoint
 
 
 # Lanelet 2 imports
@@ -17,6 +18,8 @@ class Lanelet2GlobalPlanner:
     def __init__(self):
 
         # Parameters
+        self.default_speed_limit = rospy.get_param("~speed_limit")
+        self.output_frame = rospy.get_param("/lanelet2_global_planner/output_frame")
         
         lanelet2_map_name = rospy.get_param("~lanelet2_map_name")
         self.lanelet2_loaded_map = self.load_lanelet2_map(lanelet2_map_name)        
@@ -31,7 +34,11 @@ class Lanelet2GlobalPlanner:
         self.goal_point = None        
 
         # Publishers
-        
+        self.global_path_pub = rospy.Publisher(
+            "/global_path",
+            Path,
+            queue_size=10            
+        )
 
         # Subscribers
         rospy.Subscriber(
@@ -74,7 +81,43 @@ class Lanelet2GlobalPlanner:
         lanelet2_map = load(lanelet2_map_name, projector)
 
         return lanelet2_map
+    
+    def convert_lanelet_sequence_to_waypoints(self, lanelet_sequence):
         
+        lanelet_sequence_as_list = list(lanelet_sequence)
+        waypoints = []
+        for idx, lanelet in enumerate(lanelet_sequence):
+            
+            # for avoiding overlapping points of start and end
+            if idx == len(lanelet_sequence_as_list) - 1:
+                break
+            
+            speed = None
+            # code to check if lanelet has attribute speed_ref
+            if 'speed_ref' in lanelet.attributes:
+                speed = float(lanelet.attributes['speed_ref'])
+            else:
+                speed = self.default_speed_limit
+            # convert speed from km/h to m/s
+            speed = (speed*1000)/3600
+            for point in lanelet.centerline:
+                # create Waypoint and get the coordinates from lanelet.centerline points
+                waypoint = Waypoint()
+                waypoint.position.x = point.x
+                waypoint.position.y = point.y
+                waypoint.position.z = point.z
+                waypoint.speed = speed
+                waypoints.append(waypoint)
+            
+        return waypoints
+    
+    def publish_global_path(self, waypoints):
+        g_path = Path()
+        g_path.header.frame_id = self.output_frame
+        g_path.header.stamp = rospy.Time.now()
+        g_path.waypoints = waypoints
+        self.global_path_pub.publish(g_path)
+    
     def goalpoint_callback(self, msg):
         
         if self.current_location is None:
@@ -108,7 +151,12 @@ class Lanelet2GlobalPlanner:
         
         # this returns LaneletSequence to a point where lane change would be necessary to continue
         path_no_lane_change = path.getRemainingLane(start_lanelet)
-        print(path_no_lane_change)
+        
+        #print(path_no_lane_change)
+        
+        waypoints_from_seq = self.convert_lanelet_sequence_to_waypoints(path_no_lane_change)
+        self.publish_global_path(waypoints_from_seq)
+        
         
     def current_pose_callback(self, msg):
         self.current_location = BasicPoint2d(msg.pose.position.x, msg.pose.position.y)
