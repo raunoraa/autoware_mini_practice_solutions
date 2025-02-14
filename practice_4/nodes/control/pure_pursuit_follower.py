@@ -24,7 +24,7 @@ class PurePursuitFollower:
 
         self.path_var = None
         self.distance_to_velocity_interpolator = None
-        
+
         # Necessary for ensuring that the variables are assigned at the same time
         # because ROS is multithreaded.
         self.lock = threading.Lock()
@@ -49,14 +49,14 @@ class PurePursuitFollower:
         for w in msg.waypoints:
             waypoints_xy.append((w.position.x, w.position.y))
             velocities.append(w.speed)
-        
+
         if len(waypoints_xy) == 0:
             # Destination reached: Set path and interpolator to None and stop the callback here
             with self.lock:
                 self.path_var = None
                 self.distance_to_velocity_interpolator = None
             return
-                    
+
         # convert waypoints to shapely linestring
         path_linestring = LineString(waypoints_xy)
         # prepare path - creates spatial tree, making the spatial queries more efficient
@@ -73,29 +73,28 @@ class PurePursuitFollower:
         distances = np.insert(distances, 0, 0)
         # Extract velocity values at waypoints
         velocities = np.array(velocities)
-        
+
         distance_to_velocity_interpolator = interp1d(
-                distances, velocities, kind="linear", bounds_error=False, fill_value=0.0
+            distances, velocities, kind="linear", bounds_error=False, fill_value=0.0
         )
-        
-        with self.lock:        
+
+        with self.lock:
             self.path_var = path_linestring
             self.distance_to_velocity_interpolator = distance_to_velocity_interpolator
 
     def current_pose_callback(self, msg):
-        
+
         # Check if necessary variables are not None
         if self.path_var is None or self.distance_to_velocity_interpolator is None:
             self.publish_vehicle_command(msg, steering_angle=0.0, linear_velocity=0.0)
             return
-        
+
         with self.lock:
             path_linestring = self.path_var
             distance_to_velocity_interpolator = self.distance_to_velocity_interpolator
-            
-        
+
         current_pose = Point([msg.pose.position.x, msg.pose.position.y])
-        
+
         d_ego_from_path_start = path_linestring.project(current_pose)
         _, _, heading = euler_from_quaternion(
             [
@@ -115,16 +114,14 @@ class PurePursuitFollower:
 
         l_d = distance(current_pose, lookahead_point)
         alpha = lookahead_heading - heading
-        steering_angle = np.arctan(
-            (2 * self.wheel_base * np.sin(alpha)) / l_d
-        )
-        
+        steering_angle = np.arctan((2 * self.wheel_base * np.sin(alpha)) / l_d)
+
         linear_velocity = distance_to_velocity_interpolator(d_ego_from_path_start)
-        
+
         self.publish_vehicle_command(
             msg, steering_angle=steering_angle, linear_velocity=linear_velocity
         )
-    
+
     def publish_vehicle_command(self, msg, steering_angle, linear_velocity):
         vehicle_cmd = VehicleCmd()
         vehicle_cmd.header.stamp = msg.header.stamp
