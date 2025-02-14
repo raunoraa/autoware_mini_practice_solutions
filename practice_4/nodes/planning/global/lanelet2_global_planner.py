@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import rospy
+import math
 
 from geometry_msgs.msg import PoseStamped
 from autoware_mini.msg import Path, Waypoint
-
 
 # Lanelet 2 imports
 import lanelet2
@@ -19,10 +19,12 @@ class Lanelet2GlobalPlanner:
 
         # Parameters
         self.default_speed_limit = rospy.get_param("~speed_limit")
-        self.output_frame = rospy.get_param("/lanelet2_global_planner/output_frame")
+        self.output_frame = rospy.get_param("lanelet2_global_planner/output_frame")
         
         lanelet2_map_name = rospy.get_param("~lanelet2_map_name")
-        self.lanelet2_loaded_map = self.load_lanelet2_map(lanelet2_map_name)        
+        self.lanelet2_loaded_map = self.load_lanelet2_map(lanelet2_map_name)  
+        
+        self.distance_to_goal_limit = rospy.get_param("lanelet2_global_planner/distance_to_goal_limit")      
         
         # traffic rules
         traffic_rules = lanelet2.traffic_rules.create(lanelet2.traffic_rules.Locations.Germany,
@@ -35,7 +37,7 @@ class Lanelet2GlobalPlanner:
 
         # Publishers
         self.global_path_pub = rospy.Publisher(
-            "/global_path",
+            "/planning/global_path",
             Path,
             queue_size=10            
         )
@@ -84,13 +86,8 @@ class Lanelet2GlobalPlanner:
     
     def convert_lanelet_sequence_to_waypoints(self, lanelet_sequence):
         
-        lanelet_sequence_as_list = list(lanelet_sequence)
         waypoints = []
-        for idx, lanelet in enumerate(lanelet_sequence):
-            
-            # for avoiding overlapping points of start and end
-            if idx == len(lanelet_sequence_as_list) - 1:
-                break
+        for l_idx, lanelet in enumerate(lanelet_sequence):
             
             speed = None
             # code to check if lanelet has attribute speed_ref
@@ -100,7 +97,14 @@ class Lanelet2GlobalPlanner:
                 speed = self.default_speed_limit
             # convert speed from km/h to m/s
             speed = (speed*1000)/3600
-            for point in lanelet.centerline:
+            for p_idx, point in enumerate(lanelet.centerline):
+                
+                # for avoiding overlapping points of start and end, omit the last waypoint of the lanelet
+                # except for the last lanelet, because no lanelet will follow that
+                if l_idx < len(lanelet_sequence) - 1:
+                    if p_idx == len(lanelet.centerline) - 1:
+                        break
+                
                 # create Waypoint and get the coordinates from lanelet.centerline points
                 waypoint = Waypoint()
                 waypoint.position.x = point.x
@@ -117,6 +121,9 @@ class Lanelet2GlobalPlanner:
         g_path.header.stamp = rospy.Time.now()
         g_path.waypoints = waypoints
         self.global_path_pub.publish(g_path)
+    
+    def calculate_dist(self, point1, point2):
+        return math.sqrt((point2.x - point1.x) ** 2 + (point2.y - point1.y) ** 2)
     
     def goalpoint_callback(self, msg):
         
@@ -144,22 +151,35 @@ class Lanelet2GlobalPlanner:
 
         if route is None:
             rospy.logwarn("Impossible to reach the given goal!")
-            return None
-        
+            return
+                
         # find shortest path
         path = route.shortestPath()
         
         # this returns LaneletSequence to a point where lane change would be necessary to continue
         path_no_lane_change = path.getRemainingLane(start_lanelet)
         
-        #print(path_no_lane_change)
-        
+        # reset the goal point to be in the same position as the last lanelet of the path
+        last_lanelet = path_no_lane_change[-1]
+        last_waypoint = last_lanelet.centerline[-1]
+        self.goal_point = BasicPoint2d(last_waypoint.x, last_waypoint.y)
+                
         waypoints_from_seq = self.convert_lanelet_sequence_to_waypoints(path_no_lane_change)
         self.publish_global_path(waypoints_from_seq)
         
         
     def current_pose_callback(self, msg):
         self.current_location = BasicPoint2d(msg.pose.position.x, msg.pose.position.y)
+        
+        if self.goal_point is None:
+            return
+        
+        dist = self.calculate_dist(self.current_location, self.goal_point)
+        if dist <= self.distance_to_goal_limit:
+            rospy.loginfo("Destination reached!")
+            self.publish_global_path([]) # Publish an empty path
+            self.goal_point = None
+            return
 
     def run(self):
         rospy.spin()
