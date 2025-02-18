@@ -43,12 +43,9 @@ class PurePursuitFollower:
 
     def path_callback(self, msg):
 
-        # Loop only once over the msg.waypoints
-        waypoints_xy = []
-        velocities = []
-        for w in msg.waypoints:
-            waypoints_xy.append((w.position.x, w.position.y))
-            velocities.append(w.speed)
+        # Loop twice over the msg.waypoints
+        waypoints_xy = [(w.position.x, w.position.y) for w in msg.waypoints]
+        velocities = [w.speed for w in msg.waypoints]
 
         if len(waypoints_xy) == 0:
             # Destination reached: Set path and interpolator to None and stop the callback here
@@ -112,9 +109,9 @@ class PurePursuitFollower:
             lookahead_point.y - current_pose.y, lookahead_point.x - current_pose.x
         )
 
-        l_d = distance(current_pose, lookahead_point)
+        lookahead_distance_recalculated = distance(current_pose, lookahead_point)
         alpha = lookahead_heading - heading
-        steering_angle = np.arctan((2 * self.wheel_base * np.sin(alpha)) / l_d)
+        steering_angle = np.arctan((2 * self.wheel_base * np.sin(alpha)) / lookahead_distance_recalculated)
 
         linear_velocity = distance_to_velocity_interpolator(d_ego_from_path_start)
 
@@ -138,13 +135,3 @@ if __name__ == "__main__":
     rospy.init_node("pure_pursuit_follower")
     node = PurePursuitFollower()
     node.run()
-
-"""
-Vastus küsimusele:
-Run the code with different lookahead distance by changing lookahead_distance: 20.0 in control.yaml. 
-Is the behaviour different? What is different and why?
-
-Suurema lookahead distance puhul hakkab masin kurve lõikama, 
-sest suurema lookahead distance puhul on järgmine waypoint tee peal alles peale kurvi.
-Sõiduk üritab võimalikult otse liikuda järgmise waypointini, mistõttu ei arvesta sõiduk vahepealse reaalse teega.
-"""

@@ -8,7 +8,7 @@ from tf2_ros import TransformBroadcaster
 from pyproj import CRS, Transformer, Proj
 
 from novatel_oem7_msgs.msg import INSPVA
-from geometry_msgs.msg import PoseStamped, TwistStamped, Quaternion, TransformStamped, Vector3
+from geometry_msgs.msg import PoseStamped, TwistStamped, Quaternion, TransformStamped
 
 
 class Localizer:

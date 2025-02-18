@@ -43,7 +43,7 @@ class PurePursuitFollower:
 
     def path_callback(self, msg):
 
-        # Loop only once over the msg.waypoints
+        # Loop twice over the msg.waypoints
         waypoints_xy = [(w.position.x, w.position.y) for w in msg.waypoints]
         velocities = [w.speed for w in msg.waypoints]
         
