@@ -44,11 +44,8 @@ class PurePursuitFollower:
     def path_callback(self, msg):
 
         # Loop only once over the msg.waypoints
-        waypoints_xy = []
-        velocities = []
-        for w in msg.waypoints:
-            waypoints_xy.append((w.position.x, w.position.y))
-            velocities.append(w.speed)
+        waypoints_xy = [(w.position.x, w.position.y) for w in msg.waypoints]
+        velocities = [w.speed for w in msg.waypoints]
         
         # convert waypoints to shapely linestring
         path_linestring = LineString(waypoints_xy)
@@ -104,10 +101,10 @@ class PurePursuitFollower:
             lookahead_point.y - current_pose.y, lookahead_point.x - current_pose.x
         )
 
-        l_d = distance(current_pose, lookahead_point)
+        lookahead_distance_recalculated = distance(current_pose, lookahead_point)
         alpha = lookahead_heading - heading
         steering_angle = np.arctan(
-            (2 * self.wheel_base * np.sin(alpha)) / l_d
+            (2 * self.wheel_base * np.sin(alpha)) / lookahead_distance_recalculated
         )
         
         linear_velocity = distance_to_velocity_interpolator(d_ego_from_path_start)
