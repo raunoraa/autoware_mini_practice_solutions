@@ -8,6 +8,7 @@
     <arg name="use_planning"            default="true" />
     <arg name="use_detection"           default="false" />
     <arg name="use_control"             default="true" />
+    <arg name="enable_auto_stop_checker"    default="true" />
 
 
     <!-- Use simulation time from bag -->
@@ -27,6 +28,8 @@
         <!-- Lanelet2 map visualizer -->
         <node pkg="autoware_mini" type="lanelet2_map_visualizer.py" name="lanelet2_map_visualizer" output="screen" required="true">
             <param name="lanelet2_map_name" value="$(find autoware_mini)/data/maps/$(arg lanelet2_map_name)" />
+
+            <param name="enable_auto_stop_checker" value="$(arg enable_auto_stop_checker)" />
         </node>
 
         <!-- Lanelet2 global planner -->
@@ -47,7 +50,7 @@
         <group ns="lidar">
             <!-- Ground removal -->
             <group ns="center">
-                <node type="ground_removal.py" name="ground_removal" pkg="autoware_mini" output="screen" required="true">
+                <node type="naive_ground_removal.py" name="naive_ground_removal" pkg="autoware_mini" output="screen" required="true">
                     <remap from="points_raw" to="/lidar_center/points_raw" />
                 </node>
             </group>
@@ -66,7 +69,8 @@
 
         </group>
         <!-- Config -->
-        <rosparam command="load" file="$(find autoware_mini_practice_solutions)/config/detection.yaml"/>
+        <!-- <rosparam command="load" file="$(find autoware_mini_practice_solutions)/config/detection.yaml"/> -->
+        <rosparam command="load" file="$(find autoware_mini)/config/detection.yaml"/>
 
     </group>
 
