@@ -24,6 +24,12 @@ class PointsClusterer:
         )
 
         # Publishers
+        self.clustered_points_pub = rospy.Publisher(
+            "points_clustered",
+            PointCloud2,
+            queue_size=1,
+            tcp_nodelay=True,
+        )
 
         # Subscribers
         rospy.Subscriber(
@@ -52,18 +58,19 @@ class PointsClusterer:
         point_labels_filtered = point_labels[mask]
 
         # Merge the refined arrays
-        points_labelled = np.column_stack((points_filtered, point_labels_filtered))
-        
+        points_labelled = np.column_stack((points_filtered, point_labels_filtered))        
         data = unstructured_to_structured(points_labelled, dtype=np.dtype([
             ('x', np.float32),
             ('y', np.float32),
             ('z', np.float32),
             ('label', np.int32)
         ]))
-        
+                
         cluster_msg = ros_numpy.msgify(PointCloud2, data)
+        cluster_msg.header.frame_id = msg.header.frame_id
+        cluster_msg.header.stamp = msg.header.stamp
         
-        #TODO publish the cluster_msg
+        self.clustered_points_pub.publish(cluster_msg)
         
         
     def run(self):
