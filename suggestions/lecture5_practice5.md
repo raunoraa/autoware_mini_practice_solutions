@@ -60,4 +60,5 @@ ning
 
 **Bug:** 5. sektsiooni näidiskoodis peaks importima `DetectedObjectArray` ja `DetectedObject` hoopis `autoware_mini.msg`-ist.
 
-Läks üksjagu aega, et aru saada, mida ja miks tehakse 5. sektsioonis. Võib-olla võiks seal selguse huvides lahti seletada, miks need maatriksi tehted siin vajalikud on. Tõsi ta on, et mingit osa võib-olla seletati ka Kõrgem Matemaatika 1 kursuses, kuid ajapikku võib seal õpitu ununeda. ChatGPT seletas selle päris hästi lõpuks lahti (failis p5section5_explanation_by_chatgpt.png).
+Läks üksjagu aega, et aru saada, mida ja miks tehakse 5. sektsioonis. Võib-olla võiks seal selguse huvides lahti seletada, miks need maatriksi tehted siin vajalikud on. Tõsi ta on, et mingit osa võib-olla seletati ka Kõrgem Matemaatika 1 kursuses, kuid ajapikku võib seal õpitu ununeda. ChatGPT seletas selle päris hästi lõpuks lahti:
+![ChatGPT seletus](p5section5_explanation_by_chatgpt.png)
