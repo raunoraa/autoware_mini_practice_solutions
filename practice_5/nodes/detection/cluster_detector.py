@@ -6,11 +6,11 @@ import numpy as np
 from shapely import MultiPoint
 from tf2_ros import TransformListener, Buffer, TransformException
 from numpy.lib.recfunctions import structured_to_unstructured
-from ros_numpy import numpify, msgify
+from ros_numpy import numpify
 
 from sensor_msgs.msg import PointCloud2
 from autoware_mini.msg import DetectedObjectArray, DetectedObject
-from std_msgs.msg import ColorRGBA, Header
+from std_msgs.msg import ColorRGBA
 from geometry_msgs.msg import Point32
 
 from collections import defaultdict
@@ -63,16 +63,13 @@ class ClusterDetector:
 
         tf_matrix = numpify(transform.transform).astype(np.float32)
 
-        # TODO Wrong coordinates for some reason!
-        
         # turn into homogeneous coordinates
         points[:, 3] = 1
         # transform points to target frame
         points = points.dot(tf_matrix.T)
-        print(points[0])
         dt_array = DetectedObjectArray()
         dt_array.header.stamp = msg.header.stamp
-        dt_array.header.frame_id = msg.header.frame_id
+        dt_array.header.frame_id = self.output_frame
 
         # Verify that there are detected objects present
         objects_dict = defaultdict(list)
@@ -80,7 +77,7 @@ class ClusterDetector:
         for label in np.unique(
             labels[labels != -1]
         ):  # Get unique valid labels directly
-            mask = (labels == label)  # Create mask for current label
+            mask = labels == label  # Create mask for current label
 
             points_cluster = points[mask]  # Get points corresponding to the label
             if (
@@ -104,10 +101,6 @@ class ClusterDetector:
 
             # Compute centroid
             centroid = np.mean(cluster_points, axis=0)
-            #print('********************************')
-            #print(cluster_points)
-            #print(centroid)
-            #print('********************************')
             obj.position = Point32(centroid[0], centroid[1], centroid[2])
 
             # Compute convex hull
@@ -115,7 +108,6 @@ class ClusterDetector:
                 cluster_points[:, :2]
             )  # Use only x and y coordinates
             hull = points_2d.convex_hull
-
             # Convert hull polygon to list of Point32
             convex_hull_points = [
                 Point32(x, y, centroid[2]) for x, y in hull.exterior.coords
@@ -127,14 +119,13 @@ class ClusterDetector:
             obj.label = "unknown"
             obj.color = BLUE80P  # Ensure BLUE80P is defined somewhere
             obj.valid = True
-            #obj.space_frame = self.output_frame
+            # obj.space_frame = self.output_frame # this is no longer used apparently
             obj.position_reliable = True
             obj.velocity_reliable = False
             obj.acceleration_reliable = False
 
             detected_objects.append(obj)
         dt_array.objects = detected_objects
-        #print("DT ARRAY:",detected_objects[0])
         self.objects_pub.publish(dt_array)
 
     def run(self):

@@ -70,7 +70,7 @@
         </group>
         <!-- Config -->
         <!-- <rosparam command="load" file="$(find autoware_mini_practice_solutions)/config/detection.yaml"/> -->
-        <rosparam command="load" file="$(find autoware_mini)/config/detection.yaml"/>
+        <rosparam command="load" file="$(find autoware_mini)/config/detection.yaml"/> 
 
     </group>
 
