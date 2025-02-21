@@ -117,9 +117,8 @@ class ClusterDetector:
             # Assign additional properties
             obj.id = label  # Use cluster label as ID
             obj.label = "unknown"
-            obj.color = BLUE80P  # Ensure BLUE80P is defined somewhere
+            obj.color = BLUE80P
             obj.valid = True
-            # obj.space_frame = self.output_frame # this is no longer used apparently
             obj.position_reliable = True
             obj.velocity_reliable = False
             obj.acceleration_reliable = False

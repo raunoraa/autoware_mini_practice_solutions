@@ -63,3 +63,15 @@ ning
 Läks üksjagu aega, et aru saada, mida ja miks tehakse 5. sektsioonis. Võib-olla võiks seal selguse huvides lahti seletada, miks need maatriksi tehted siin vajalikud on. Tõsi ta on, et mingit osa võib-olla seletati ka Kõrgem Matemaatika 1 kursuses, kuid ajapikku võib seal õpitu ununeda. ChatGPT seletas selle päris hästi lõpuks lahti:
 
 ![ChatGPT seletus](p5section5_explanation_by_chatgpt.png)
+
+**Viga juhendis:** Seoses `DetectedObject` muutustega, peaksid juhendis olevad lisaparameetrid 6. setsiooni 5. alapunktis olema antud hoopis sellised:
+
+``` python
+obj.id = label
+obj.label = "unknown"
+obj.color = BLUE80P
+obj.valid = True
+obj.position_reliable = True
+obj.velocity_reliable = False
+obj.acceleration_reliable = False
+```
