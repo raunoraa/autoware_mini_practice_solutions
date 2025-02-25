@@ -47,19 +47,12 @@ class PointsClusterer:
         point_labels = self.clusterer.fit_predict(points)
         assert points.shape[0] == point_labels.shape[0]
         
-        # throw away unnecessary points
-        unwanted_values = {-1}
+        # Merge points and label arrays along axis 1. The label array must be expanded to 2D to ensure matching dimensions
+        points_labeled = np.concatenate((points, point_labels[:, np.newaxis]), axis=1)
 
-        # Create a mask for values to keep
-        mask = ~np.isin(point_labels, list(unwanted_values))  
-
-        # Apply mask to both arrays
-        points_filtered = points[mask]  
-        point_labels_filtered = point_labels[mask]
-
-        # Merge the refined arrays
-        points_labelled = np.column_stack((points_filtered, point_labels_filtered))        
-        data = unstructured_to_structured(points_labelled, dtype=np.dtype([
+        # Filter out labels with value -1
+        points_labeled = points_labeled[points_labeled[:,3] != -1]      
+        data = unstructured_to_structured(points_labeled, dtype=np.dtype([
             ('x', np.float32),
             ('y', np.float32),
             ('z', np.float32),

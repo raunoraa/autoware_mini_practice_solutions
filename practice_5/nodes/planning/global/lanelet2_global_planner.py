@@ -15,6 +15,11 @@ from lanelet2.core import BasicPoint2d
 from lanelet2.geometry import findNearest
 
 
+# Helper function for calculating the distance between two points
+def calculate_dist(point1, point2):
+    return math.sqrt((point2.x - point1.x) ** 2 + (point2.y - point1.y) ** 2)
+
+
 class Lanelet2GlobalPlanner:
     def __init__(self):
 
@@ -26,20 +31,21 @@ class Lanelet2GlobalPlanner:
             "lanelet2_global_planner/distance_to_goal_limit"
         )
 
-        # Local parameters for lanelet2 map loading
-        lanelet2_map_name = rospy.get_param("~lanelet2_map_name")
-        coordinate_transformer = rospy.get_param("/localization/coordinate_transformer")
-        use_custom_origin = rospy.get_param("/localization/use_custom_origin")
-        utm_origin_lat = rospy.get_param("/localization/utm_origin_lat")
-        utm_origin_lon = rospy.get_param("/localization/utm_origin_lon")
-
-        self.lanelet2_loaded_map = self.load_lanelet2_map(
-            lanelet2_map_name,
-            coordinate_transformer,
-            use_custom_origin,
-            utm_origin_lat,
-            utm_origin_lon,
+        # Parameters for lanelet2 map loading:
+        # lanelet2_map_name: name of the lanelet2 map file
+        # coordinate_transformer: coordinate transformer
+        # use_custom_origin: use custom origin
+        # utm_origin_lat: utm origin latitude
+        # utm_origin_lon: utm origin longitude
+        self.lanelet2_map_name = rospy.get_param("~lanelet2_map_name")
+        self.coordinate_transformer = rospy.get_param(
+            "/localization/coordinate_transformer"
         )
+        self.use_custom_origin = rospy.get_param("/localization/use_custom_origin")
+        self.utm_origin_lat = rospy.get_param("/localization/utm_origin_lat")
+        self.utm_origin_lon = rospy.get_param("/localization/utm_origin_lon")
+
+        self.lanelet2_loaded_map = self.load_lanelet2_map()
 
         # traffic rules
         traffic_rules = lanelet2.traffic_rules.create(
@@ -71,36 +77,26 @@ class Lanelet2GlobalPlanner:
             queue_size=1,
         )
 
-    def load_lanelet2_map(
-        self,
-        lanelet2_map_name,
-        coordinate_transformer,
-        use_custom_origin,
-        utm_origin_lat,
-        utm_origin_lon,
-    ):
+    def load_lanelet2_map(self):
         """
         Load a lanelet2 map from a file and return it
-        :param lanelet2_map_name: name of the lanelet2 map file
-        :param coordinate_transformer: coordinate transformer
-        :param use_custom_origin: use custom origin
-        :param utm_origin_lat: utm origin latitude
-        :param utm_origin_lon: utm origin longitude
         :return: lanelet2 map
         """
 
         # Load the map using Lanelet2
-        if coordinate_transformer == "utm":
+        if self.coordinate_transformer == "utm":
             projector = UtmProjector(
-                Origin(utm_origin_lat, utm_origin_lon), use_custom_origin, False
+                Origin(self.utm_origin_lat, self.utm_origin_lon),
+                self.use_custom_origin,
+                False,
             )
         else:
             raise ValueError(
                 'Unknown coordinate_transformer for loading the Lanelet2 map ("utm" should be used): '
-                + coordinate_transformer
+                + self.coordinate_transformer
             )
 
-        lanelet2_map = load(lanelet2_map_name, projector)
+        lanelet2_map = load(self.lanelet2_map_name, projector)
 
         return lanelet2_map
 
@@ -118,7 +114,11 @@ class Lanelet2GlobalPlanner:
             pass  # If conversion to float fails, it's invalid
         return False
 
-    def convert_lanelet_sequence_to_waypoints(self, lanelet_sequence):
+    def convert_lanelet_sequence_to_waypoints(
+        self, lanelet_sequence, user_selected_goalpoint
+    ):
+
+        # returns waypoints seqeunce and sets the goal point on path
 
         waypoints = []
         for l_idx, lanelet in enumerate(lanelet_sequence):
@@ -133,12 +133,48 @@ class Lanelet2GlobalPlanner:
                 speed = self.default_speed_limit
             # convert speed from km/h to m/s
             speed /= 3.6
+
+            # if we are looking at the last lanelet, there will be the goalpoint
+            goal_point_on_path = None
+            lanelet_path = None
+            dist_on_path = None
+            if l_idx == len(lanelet_sequence) - 1:
+                # Create a Shapely LineString for the centerline of the last lanelet
+                lanelet_path = shapely.LineString(
+                    [(point.x, point.y) for point in lanelet.centerline]
+                )
+                # Project the goal point onto the centerline of the last lanelet
+                dist_on_path = lanelet_path.project(
+                    shapely.Point(user_selected_goalpoint.x, user_selected_goalpoint.y)
+                )
+                goal_point_on_path = lanelet_path.interpolate(dist_on_path)
+
+                self.goal_point = BasicPoint2d(
+                    goal_point_on_path.x, goal_point_on_path.y
+                )
+
             for p_idx, point in enumerate(lanelet.centerline):
 
                 # for avoiding overlapping points of start and end, omit the last waypoint of the lanelet
                 # except for the last lanelet, because no lanelet will follow that
                 if l_idx < len(lanelet_sequence) - 1:
                     if p_idx == len(lanelet.centerline) - 1:
+                        break
+                else:
+                    # discard points that are after the goal point on the path
+                    if (
+                        lanelet_path.project(shapely.Point(point.x, point.y))
+                        >= dist_on_path
+                    ):
+                        # create goal waypoint, get x and y from the goal point on the path
+                        waypoint = Waypoint()
+                        waypoint.position.x = self.goal_point.x
+                        waypoint.position.y = self.goal_point.y
+
+                        # For z and speed, just take the current point's values
+                        waypoint.position.z = point.z
+                        waypoint.speed = speed
+                        waypoints.append(waypoint)
                         break
 
                 # create Waypoint and get the coordinates from lanelet.centerline points
@@ -157,9 +193,6 @@ class Lanelet2GlobalPlanner:
         g_path.header.stamp = rospy.Time.now()
         g_path.waypoints = waypoints
         self.global_path_pub.publish(g_path)
-
-    def calculate_dist(self, point1, point2):
-        return math.sqrt((point2.x - point1.x) ** 2 + (point2.y - point1.y) ** 2)
 
     def find_path_no_lane_change(self, current_location, goal_point):
 
@@ -214,39 +247,10 @@ class Lanelet2GlobalPlanner:
         )
 
         waypoints_from_seq = self.convert_lanelet_sequence_to_waypoints(
-            path_no_lane_change
+            path_no_lane_change, user_selected_goalpoint
         )
-        waypoints_xy = [(w.position.x, w.position.y) for w in waypoints_from_seq]
-        waypoints_linestring = shapely.LineString(waypoints_xy)
 
-        dist_on_path = waypoints_linestring.project(
-            shapely.Point(user_selected_goalpoint.x, user_selected_goalpoint.y)
-        )
-        closest_point_on_path = waypoints_linestring.interpolate(dist_on_path)
-
-        self.goal_point = BasicPoint2d(closest_point_on_path.x, closest_point_on_path.y)
-
-        # Remove unnecessary waypoints from the path end
-        refined_waypoints = []
-        for idx, w in enumerate(waypoints_from_seq):
-            if (
-                waypoints_linestring.project(shapely.Point(w.position.x, w.position.y))
-                < dist_on_path
-            ):
-                refined_waypoints.append(w)
-            else:
-                # create goal waypoint
-                waypoint = Waypoint()
-                waypoint.position.x = self.goal_point.x
-                waypoint.position.y = self.goal_point.y
-
-                # For z and speed, just take the previous waypoint's values
-                waypoint.position.z = waypoints_from_seq[idx].position.z
-                waypoint.speed = waypoints_from_seq[idx].speed
-                refined_waypoints.append(waypoint)
-                break
-
-        self.publish_global_path(refined_waypoints)
+        self.publish_global_path(waypoints_from_seq)
 
     def current_pose_callback(self, msg):
         self.current_location = BasicPoint2d(msg.pose.position.x, msg.pose.position.y)
@@ -254,7 +258,7 @@ class Lanelet2GlobalPlanner:
         if self.goal_point is None:
             return
 
-        dist = self.calculate_dist(self.current_location, self.goal_point)
+        dist = calculate_dist(self.current_location, self.goal_point)
         if dist <= self.distance_to_goal_limit:
             rospy.loginfo("Destination reached!")
             self.publish_global_path([])  # Publish an empty path
