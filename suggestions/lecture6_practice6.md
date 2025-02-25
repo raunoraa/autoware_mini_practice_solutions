@@ -6,7 +6,7 @@
 
 ## Praktikum 6
 
-**Bug:** 1. sektsiooni näidiskoodis peaks importima `autoware_mini.msg` teegist. Samuti tuleks seetõttu näidiskoodis igal pool ära vahetada `Lane` `Path` vastu. Samuti peaks olema `w.pose.pose.position.x` asemel `w.position.x` (sama kehtib ka y ja z koordinaatide puhul). Samuti on kiiruse jaoks `w.twist.twist.linear.x` asemel vaja hoopis `w.speed`.
+**Bug:** 1. sektsiooni näidiskoodis peaks importima `autoware_mini.msg` teegist. Samuti tuleks seetõttu näidiskoodis igal pool ära vahetada `Lane` `Path` vastu. Samuti peaks olema `w.pose.pose.position.x` asemel `w.position.x` (sama kehtib ka y ja z koordinaatide puhul). Samuti on kiiruse jaoks `w.twist.twist.linear.x` asemel vaja hoopis `w.speed`. Samuti on `Path` objektil hoopis isendiväli `stopping_point_distance`, mitte enam `cost`, seetõttu tuleks koodi muuta veel nii: `lane.cost` asemel kirjutada `lane.stopping_point_distance`.
 
 **Bug:** `practice_6_sim.launch` ja `practice_6_bag.launch` failidest on puudu:
 `<arg name="enable_auto_stop_checker"    default="true" />`

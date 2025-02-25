@@ -68,7 +68,6 @@ class SimpleLocalPlanner:
         )
         rospy.Subscriber(
             "/detection/final_objects",
-            # "/detection/detected_objects",
             DetectedObjectArray,
             self.detected_objects_callback,
             queue_size=1,
@@ -132,7 +131,7 @@ class SimpleLocalPlanner:
     def detected_objects_callback(self, msg):
         print("------ detected objects callback, number of objects: ", len(msg.objects))
 
-        # TODO check if all important class variables are set
+        # Check if all important class variables are set
         if any(
             var is None
             for var in [
@@ -146,8 +145,33 @@ class SimpleLocalPlanner:
             self.publish_local_path_wp([], msg.header.stamp, self.output_frame)
             return
 
+        # TODO solve issues with tasks 2.5 - 2.7
         with self.lock:
-            ...  # TODO assign variables
+            # Assign class variables to local variables
+            global_path_linestring = self.global_path_linestring
+            global_path_distances = self.global_path_distances
+            distance_to_velocity_interpolator = self.distance_to_velocity_interpolator
+            current_speed = self.current_speed
+            current_position = self.current_position
+
+        d_ego_from_path_start = global_path_linestring.project(current_position)
+        local_path = self.extract_local_path(
+            global_path_linestring,
+            global_path_distances,
+            d_ego_from_path_start,
+            self.local_path_length,
+        )
+        if local_path is None:
+            self.publish_local_path_wp([], msg.header.stamp, self.output_frame)
+            return
+        
+        target_velocity = distance_to_velocity_interpolator(d_ego_from_path_start)
+        local_path_waypoints = self.convert_local_path_to_waypoints(
+            local_path, target_velocity
+        )
+        self.publish_local_path_wp(
+            local_path_waypoints, msg.header.stamp, self.output_frame
+        )
 
     def extract_local_path(
         self,
@@ -187,10 +211,10 @@ class SimpleLocalPlanner:
         local_path_waypoints = []
         for point in local_path.coords:
             waypoint = Waypoint()
-            waypoint.pose.pose.position.x = point[0]
-            waypoint.pose.pose.position.y = point[1]
-            waypoint.pose.pose.position.z = point[2]
-            waypoint.twist.twist.linear.x = target_velocity
+            waypoint.position.x = point[0]
+            waypoint.position.y = point[1]
+            waypoint.position.z = point[2]
+            waypoint.speed = target_velocity
             local_path_waypoints.append(waypoint)
         return local_path_waypoints
 
@@ -204,16 +228,16 @@ class SimpleLocalPlanner:
         local_path_blocked=False,
         stopping_point_distance=0.0,
     ):
-        # create lane message
-        lane = Path()
-        lane.header.frame_id = output_frame
-        lane.header.stamp = stamp
-        lane.waypoints = local_path_waypoints
-        lane.closest_object_distance = closest_object_distance
-        lane.closest_object_velocity = closest_object_velocity
-        lane.is_blocked = local_path_blocked
-        #lane.cost = stopping_point_distance # there is no cost field in Path message anymore
-        self.local_path_pub.publish(lane)
+        # create path message
+        path = Path()
+        path.header.frame_id = output_frame
+        path.header.stamp = stamp
+        path.waypoints = local_path_waypoints
+        path.closest_object_distance = closest_object_distance
+        path.closest_object_velocity = closest_object_velocity
+        path.is_blocked = local_path_blocked
+        path.stopping_point_distance = stopping_point_distance  # there is no cost field in the Path message anymore
+        self.local_path_pub.publish(path)
 
     def run(self):
         rospy.spin()
