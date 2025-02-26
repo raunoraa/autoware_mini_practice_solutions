@@ -8,10 +8,12 @@ import numpy as np
 from autoware_mini.msg import Path, DetectedObjectArray, Waypoint
 from geometry_msgs.msg import PoseStamped, TwistStamped, Vector3, Vector3Stamped
 from shapely.geometry import LineString, Point, Polygon
-from shapely import prepare
+from shapely import prepare, intersects, intersection
 from tf2_geometry_msgs import do_transform_vector3
 from scipy.interpolate import interp1d
 from numpy.lib.recfunctions import unstructured_to_structured
+
+import heapq
 
 
 class SimpleLocalPlanner:
@@ -145,13 +147,12 @@ class SimpleLocalPlanner:
             self.publish_local_path_wp([], msg.header.stamp, self.output_frame)
             return
 
-        # TODO solve issues with tasks 2.5 - 2.7
         with self.lock:
             # Assign class variables to local variables
             global_path_linestring = self.global_path_linestring
             global_path_distances = self.global_path_distances
             distance_to_velocity_interpolator = self.distance_to_velocity_interpolator
-            current_speed = self.current_speed
+            #current_speed = self.current_speed
             current_position = self.current_position
 
         d_ego_from_path_start = global_path_linestring.project(current_position)
@@ -165,13 +166,94 @@ class SimpleLocalPlanner:
             self.publish_local_path_wp([], msg.header.stamp, self.output_frame)
             return
         
-        target_velocity = distance_to_velocity_interpolator(d_ego_from_path_start)
+        map_based_target_velocity = distance_to_velocity_interpolator(d_ego_from_path_start)
         local_path_waypoints = self.convert_local_path_to_waypoints(
-            local_path, target_velocity
+            local_path, map_based_target_velocity
         )
-        self.publish_local_path_wp(
-            local_path_waypoints, msg.header.stamp, self.output_frame
-        )
+        if len(msg.objects) == 0:
+            self.publish_local_path_wp(
+                local_path_waypoints,
+                msg.header.stamp,
+                self.output_frame,
+            )
+        else:
+            # TODO Major issue: vehicle is not stopping when an object is detected (task 4)
+            
+            # create a buffer around the local path
+            local_path_buffer = local_path.buffer(self.stopping_lateral_distance, cap_style="flat")
+            prepare(local_path_buffer)
+
+            object_distances = []
+            target_velocities = []
+            for detected_object in msg.objects:
+                
+                # We need to take the minimum distance for each object,
+                # if it intersects with the local path.
+                
+                # Convert obj.convex_hull.points to a Shapely Polygon
+                convex_hull_polygon = Polygon([(p.x, p.y) for p in detected_object.convex_hull.points])
+                if intersects(local_path_buffer, convex_hull_polygon):
+                    
+                    distances = []
+                    intersection_polygon = intersection(local_path_buffer, convex_hull_polygon)
+                    for idx, point_coords in enumerate(intersection_polygon.exterior.coords):
+                        # First and last point are the same
+                        if idx < len(intersection_polygon.exterior.coords) - 1:
+                            d = local_path.project(Point(point_coords))
+                            
+                            # heap has O(log n) complexity for push (list has O(1))
+                            heapq.heappush(distances, d)
+                    # BUT heap has O(1) complexity for finding the minimum element (list has O(n))
+                    distance_to_object = distances[0]
+                    object_distances.append(distance_to_object)
+
+                    object_velocity = 0.0 # Let it be 0 for now
+                    # Calculate the target velocity for the object
+                    target_velocity = math.sqrt(
+                        max(0, object_velocity ** 2 + 2 * self.default_deceleration * distance_to_object)
+                    )
+                    target_velocities.append(target_velocity)
+            
+            target_velocities = np.array(target_velocities)
+            
+            print("target velocities: ", target_velocities)
+            # print("object distances: ", object_distances)
+            
+            # Should be more optimal to use np.argmin instead of finding minimum element's index on regular python list
+            # However, not completely sure if converting list to np.array overhead is worth it (its O(n))
+            min_idx = np.argmin(target_velocities)
+            
+            # Always stay within the limit of the map-based target velocity
+            min_target_velocity = min(target_velocities[min_idx], map_based_target_velocity)
+            min_object_dist = object_distances[min_idx]
+            
+            # Recalculate target_velocity for all the waypoints using the closest object
+            zero_speeds_onwards = False
+            for i, wp in enumerate(local_path_waypoints):
+
+                # once we get zero speed, keep it that way
+                if zero_speeds_onwards:
+                    wp.speed = 0.0
+                    continue
+
+                # overwrite target velocity of wp
+                wp.speed = min(min_target_velocity, wp.speed)
+
+                # from stop point onwards all speeds are set to zero
+                if math.isclose(wp.speed, 0.0):
+                    zero_speeds_onwards = True
+
+            
+            self.publish_local_path_wp(
+                local_path_waypoints,
+                msg.header.stamp,
+                self.output_frame,
+                closest_object_distance=min_object_dist,
+                closest_object_velocity=0.0, # for now
+                local_path_blocked=True,
+                stopping_point_distance=min_object_dist,
+            )
+            
 
     def extract_local_path(
         self,

@@ -86,4 +86,6 @@ ning `practice_6_sim.launch` failis järgmiseks:
 </group>
 ```
 
-TODO
+Juhendis võiks olla 4. ülesande juures vihjena mainitud, et muuta tuleb local path waypointide kiiruseid.
+
+Juhendi README-s on mõned vormistuslikud vead.
