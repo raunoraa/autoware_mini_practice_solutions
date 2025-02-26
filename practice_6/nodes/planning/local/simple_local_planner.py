@@ -176,8 +176,8 @@ class SimpleLocalPlanner:
                 msg.header.stamp,
                 self.output_frame,
             )
-        else:
-            # TODO Major issue: vehicle is not stopping when an object is detected (task 4)
+        else:            
+            # TODO task6 there is a chance, that there will be 0 objects detected and it reaches here, which will throw an error. Don't know yet, if it's ok or not.
             
             # create a buffer around the local path
             local_path_buffer = local_path.buffer(self.stopping_lateral_distance, cap_style="flat")
@@ -185,6 +185,7 @@ class SimpleLocalPlanner:
 
             object_distances = []
             target_velocities = []
+            object_velocities = []
             for detected_object in msg.objects:
                 
                 # We need to take the minimum distance for each object,
@@ -193,6 +194,16 @@ class SimpleLocalPlanner:
                 # Convert obj.convex_hull.points to a Shapely Polygon
                 convex_hull_polygon = Polygon([(p.x, p.y) for p in detected_object.convex_hull.points])
                 if intersects(local_path_buffer, convex_hull_polygon):
+                    
+                    # Get the object's velocity in the output frame
+                    transform = self.tf_buffer.lookup_transform(self.output_frame, msg.header.frame_id, msg.header.stamp, rospy.Duration(self.transform_timeout))
+                    if transform is not None:
+                        vector3_stamped = Vector3Stamped(vector=detected_object.velocity)
+                        velocity = do_transform_vector3(vector3_stamped, transform)
+                    else:
+                        velocity = Vector3()
+                    print(velocity)
+                    object_velocities.append(velocity)
                     
                     distances = []
                     intersection_polygon = intersection(local_path_buffer, convex_hull_polygon)
@@ -204,20 +215,22 @@ class SimpleLocalPlanner:
                             # heap has O(log n) complexity for push (list has O(1))
                             heapq.heappush(distances, d)
                     # BUT heap has O(1) complexity for finding the minimum element (list has O(n))
-                    distance_to_object = distances[0]
+                    # Additionaly, consider current pose to car front distance and braking safety distance
+                    distance_to_object = max(0.0, distances[0] - self.current_pose_to_car_front)
+                    distance_to_object_with_safety = max(0.0, distance_to_object - self.braking_safety_distance_obstacle)
                     object_distances.append(distance_to_object)
 
                     object_velocity = 0.0 # Let it be 0 for now
                     # Calculate the target velocity for the object
                     target_velocity = math.sqrt(
-                        max(0, object_velocity ** 2 + 2 * self.default_deceleration * distance_to_object)
+                        max(0, object_velocity ** 2 + 2 * self.default_deceleration * distance_to_object_with_safety)
                     )
                     target_velocities.append(target_velocity)
             
             target_velocities = np.array(target_velocities)
             
-            print("target velocities: ", target_velocities)
-            # print("object distances: ", object_distances)
+            #print("target velocities: ", target_velocities)
+            #print("object distances: ", object_distances)
             
             # Should be more optimal to use np.argmin instead of finding minimum element's index on regular python list
             # However, not completely sure if converting list to np.array overhead is worth it (its O(n))

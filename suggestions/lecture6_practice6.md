@@ -88,4 +88,8 @@ ning `practice_6_sim.launch` failis järgmiseks:
 
 Juhendis võiks olla 4. ülesande juures vihjena mainitud, et muuta tuleb local path waypointide kiiruseid.
 
+**Viga juhendis:** 6. sektsioonis viidatud link annab error 404. Ehk `ema_tracker.py` node enam ei eksisteeri või on see kuskil mujal.
+
 Juhendi README-s on mõned vormistuslikud vead.
+
+TODO alates 6.5
