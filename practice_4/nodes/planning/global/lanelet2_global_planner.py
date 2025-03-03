@@ -166,13 +166,13 @@ class Lanelet2GlobalPlanner:
                         lanelet_path.project(shapely.Point(point.x, point.y))
                         >= dist_on_path
                     ):
-                        # create goal waypoint, get x and y from the goal point on the path
+                        # create goal waypoint, get x, y and z from the goal point on the path
                         waypoint = Waypoint()
                         waypoint.position.x = self.goal_point.x
                         waypoint.position.y = self.goal_point.y
+                        waypoint.position.z = goal_point_on_path.z
 
-                        # For z and speed, just take the current point's values
-                        waypoint.position.z = point.z
+                        # For speed, just take the current point's values
                         waypoint.speed = speed
                         waypoints.append(waypoint)
                         break

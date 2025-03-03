@@ -11,7 +11,6 @@ from shapely.geometry import LineString, Point, Polygon
 from shapely import prepare, intersects, intersection
 from tf2_geometry_msgs import do_transform_vector3
 from scipy.interpolate import interp1d
-from numpy.lib.recfunctions import unstructured_to_structured
 
 import heapq
 
@@ -152,7 +151,7 @@ class SimpleLocalPlanner:
             global_path_linestring = self.global_path_linestring
             global_path_distances = self.global_path_distances
             distance_to_velocity_interpolator = self.distance_to_velocity_interpolator
-            #current_speed = self.current_speed
+            # current_speed = self.current_speed
             current_position = self.current_position
 
         d_ego_from_path_start = global_path_linestring.project(current_position)
@@ -165,8 +164,10 @@ class SimpleLocalPlanner:
         if local_path is None:
             self.publish_local_path_wp([], msg.header.stamp, self.output_frame)
             return
-        
-        map_based_target_velocity = distance_to_velocity_interpolator(d_ego_from_path_start)
+
+        map_based_target_velocity = distance_to_velocity_interpolator(
+            d_ego_from_path_start
+        )
         local_path_waypoints = self.convert_local_path_to_waypoints(
             local_path, map_based_target_velocity
         )
@@ -176,70 +177,109 @@ class SimpleLocalPlanner:
                 msg.header.stamp,
                 self.output_frame,
             )
-        else:            
-            # TODO task6 there is a chance, that there will be 0 objects detected and it reaches here, which will throw an error. Don't know yet, if it's ok or not.
-            
+        else:
             # create a buffer around the local path
-            local_path_buffer = local_path.buffer(self.stopping_lateral_distance, cap_style="flat")
+            local_path_buffer = local_path.buffer(
+                self.stopping_lateral_distance, cap_style="flat"
+            )
             prepare(local_path_buffer)
 
             object_distances = []
             target_velocities = []
             object_velocities = []
             for detected_object in msg.objects:
-                
+
                 # We need to take the minimum distance for each object,
                 # if it intersects with the local path.
-                
+
                 # Convert obj.convex_hull.points to a Shapely Polygon
-                convex_hull_polygon = Polygon([(p.x, p.y) for p in detected_object.convex_hull.points])
+                convex_hull_polygon = Polygon(
+                    [(p.x, p.y) for p in detected_object.convex_hull.points]
+                )
                 if intersects(local_path_buffer, convex_hull_polygon):
-                    
-                    # Get the object's velocity in the output frame
-                    transform = self.tf_buffer.lookup_transform(self.output_frame, msg.header.frame_id, msg.header.stamp, rospy.Duration(self.transform_timeout))
+                    # TODO Transform values seem to be weird, which causes the velocities not to change after transform
+                    transform = self.tf_buffer.lookup_transform(
+                        self.output_frame,
+                        msg.header.frame_id,
+                        msg.header.stamp,
+                        rospy.Duration(self.transform_timeout),
+                    )
                     if transform is not None:
-                        vector3_stamped = Vector3Stamped(vector=detected_object.velocity)
+                        print(transform)
+                        vector3_stamped = Vector3Stamped(
+                            vector=detected_object.velocity
+                        )
+                        vec = vector3_stamped.vector
+                        #print("Velocity:", str(math.sqrt(vec.x**2 + vec.y**2 + vec.z**2)), end=" ;; ")
                         velocity = do_transform_vector3(vector3_stamped, transform)
+                        vec = velocity.vector
+                        #print(vector3_stamped.vector == vec)
+                        #print("Transformed velocity:", str(math.sqrt(vec.x**2 + vec.y**2 + vec.z**2)))
                     else:
                         velocity = Vector3()
-                    print(velocity)
                     object_velocities.append(velocity)
-                    
+
                     distances = []
-                    intersection_polygon = intersection(local_path_buffer, convex_hull_polygon)
-                    for idx, point_coords in enumerate(intersection_polygon.exterior.coords):
+                    intersection_polygon = intersection(
+                        local_path_buffer, convex_hull_polygon
+                    )
+                    for idx, point_coords in enumerate(
+                        intersection_polygon.exterior.coords
+                    ):
                         # First and last point are the same
                         if idx < len(intersection_polygon.exterior.coords) - 1:
                             d = local_path.project(Point(point_coords))
-                            
+
                             # heap has O(log n) complexity for push (list has O(1))
                             heapq.heappush(distances, d)
                     # BUT heap has O(1) complexity for finding the minimum element (list has O(n))
                     # Additionaly, consider current pose to car front distance and braking safety distance
-                    distance_to_object = max(0.0, distances[0] - self.current_pose_to_car_front)
-                    distance_to_object_with_safety = max(0.0, distance_to_object - self.braking_safety_distance_obstacle)
+                    distance_to_object = max(
+                        0.0, distances[0] - self.current_pose_to_car_front
+                    )
+                    distance_to_object_with_safety = max(
+                        0.0, distance_to_object - self.braking_safety_distance_obstacle
+                    )
                     object_distances.append(distance_to_object)
 
-                    object_velocity = 0.0 # Let it be 0 for now
+                    object_velocity = 0.0  # Let it be 0 for now
                     # Calculate the target velocity for the object
                     target_velocity = math.sqrt(
-                        max(0, object_velocity ** 2 + 2 * self.default_deceleration * distance_to_object_with_safety)
+                        max(
+                            0,
+                            object_velocity**2
+                            + 2
+                            * self.default_deceleration
+                            * distance_to_object_with_safety,
+                        )
                     )
                     target_velocities.append(target_velocity)
-            
+
+            # No objects detected, which intersect with the current local path
+            # Which means we can publish the local path with no blocking objects
+            if len(target_velocities) == 0:
+                self.publish_local_path_wp(
+                    local_path_waypoints,
+                    msg.header.stamp,
+                    self.output_frame,
+                )
+                return
+
             target_velocities = np.array(target_velocities)
-            
-            #print("target velocities: ", target_velocities)
-            #print("object distances: ", object_distances)
-            
+
+            # print("target velocities: ", target_velocities)
+            # print("object distances: ", object_distances)
+
             # Should be more optimal to use np.argmin instead of finding minimum element's index on regular python list
             # However, not completely sure if converting list to np.array overhead is worth it (its O(n))
             min_idx = np.argmin(target_velocities)
-            
+
             # Always stay within the limit of the map-based target velocity
-            min_target_velocity = min(target_velocities[min_idx], map_based_target_velocity)
+            min_target_velocity = min(
+                target_velocities[min_idx], map_based_target_velocity
+            )
             min_object_dist = object_distances[min_idx]
-            
+
             # Recalculate target_velocity for all the waypoints using the closest object
             zero_speeds_onwards = False
             for i, wp in enumerate(local_path_waypoints):
@@ -256,17 +296,15 @@ class SimpleLocalPlanner:
                 if math.isclose(wp.speed, 0.0):
                     zero_speeds_onwards = True
 
-            
             self.publish_local_path_wp(
                 local_path_waypoints,
                 msg.header.stamp,
                 self.output_frame,
                 closest_object_distance=min_object_dist,
-                closest_object_velocity=0.0, # for now
+                closest_object_velocity=0.0,  # for now
                 local_path_blocked=True,
                 stopping_point_distance=min_object_dist,
             )
-            
 
     def extract_local_path(
         self,

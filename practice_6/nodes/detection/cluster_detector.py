@@ -13,8 +13,6 @@ from autoware_mini.msg import DetectedObjectArray, DetectedObject
 from std_msgs.msg import ColorRGBA
 from geometry_msgs.msg import Point32
 
-from collections import defaultdict
-
 BLUE80P = ColorRGBA(0.0, 0.0, 1.0, 0.8)
 
 
@@ -71,41 +69,30 @@ class ClusterDetector:
         dt_array.header.stamp = msg.header.stamp
         dt_array.header.frame_id = self.output_frame
 
-        # Verify that there are detected objects present
-        objects_dict = defaultdict(list)
-
+        detected_objects = []
         for label in np.unique(
             labels[labels != -1]
         ):  # Get unique valid labels directly
             mask = labels == label  # Create mask for current label
 
-            points_cluster = points[mask]  # Get points corresponding to the label
+            # Get points corresponding to the label
+            # Get only x, y, z coordinates
+            points_cluster = points[mask, :3]
             if (
                 points_cluster.shape[0] < self.min_cluster_size
             ):  # Check if the cluster is large enough
                 continue
 
-            objects_dict[label] = points[
-                mask, :3
-            ]  # Store points corresponding to the label
-
-        # If no objects were detected, publish empty array
-        if not objects_dict:
-            dt_array.objects = []
-            self.objects_pub.publish(dt_array)
-            return
-
-        detected_objects = []
-        for label, cluster_points in objects_dict.items():
+            # Create a detected object
             obj = DetectedObject()
 
             # Compute centroid
-            centroid = np.mean(cluster_points, axis=0)
+            centroid = np.mean(points_cluster, axis=0)
             obj.position = Point32(centroid[0], centroid[1], centroid[2])
 
             # Compute convex hull
             points_2d = MultiPoint(
-                cluster_points[:, :2]
+                points_cluster[:, :2]
             )  # Use only x and y coordinates
             hull = points_2d.convex_hull
             # Convert hull polygon to list of Point32
@@ -124,6 +111,7 @@ class ClusterDetector:
             obj.acceleration_reliable = False
 
             detected_objects.append(obj)
+
         dt_array.objects = detected_objects
         self.objects_pub.publish(dt_array)
 
